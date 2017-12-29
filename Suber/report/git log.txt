@@ -1,0 +1,772 @@
+2016/12/2
+
+header.php
+<a href="index.php">MainPage</a>&nbsp;<a href="profile.php">profile</a>&nbsp;
+<a href="home.php">Home</a> &nbsp;<a href="logout.php">Logout</a>&nbsp;
+<?php if($_SESSION['user']['status']!='inactive'): ?>
+	<a href="myTrip.php">my Trip</a>&nbsp; 
+	<a href="myBook.php">my Book</a>&nbsp; 
+	<input type="button" id="email_button" name="email_button" style="background-image:url('images.jpg');background-size:27px 22px;width:30px;height:25px;">
+<?php endif; ?><br>
+
+modifyTrip.php
+
+<?php
+session_start();
+require_once("parameter.php");
+if(!isset($_SESSION['user']))
+{
+	header('location:index.php');
+	exit;
+}
+elseif(isset($_GET['id']))
+{
+	$pdo = new PDO("mysql:host=".$dbhost.";dbname=".$dbname,$dbuser,$dbpassword); 
+	$pdo->exec("SET NAMES 'utf8';");
+	$rs = $pdo -> query("SELECT * FROM trip WHERE id='".$_GET['id']."'");
+	if($rs->rowCount() == 0)
+	{
+		echo "<script type='text/javascript'>alert('Sent Message successfully');</script>";
+		header('location:home.php');
+	}
+	else
+	{
+		$content = $rs->fetch();
+	}
+}
+if(isset($_POST['type'])&&isset($_POST['city_depart'])&&isset($_POST['postcode_depart'])
+	&&isset($_POST['city_destin'])&&isset($_POST['postcode_destin'])&&isset($_POST['number_rider'])
+	&&isset($_POST['dateOftrip'])&&isset($_POST['detail']))
+{
+	$pdo = new PDO("mysql:host=".$dbhost.";dbname=".$dbname,$dbuser,$dbpassword); 
+	$pdo->exec("SET NAMES 'utf8';");
+	if($_POST['type']=='oneTime')
+	{	
+		$prep = $pdo -> prepare("UPDATE trip SET type= :type, City_departure= :city_depart, Postcode_departure= :postcode_depart, 
+			City_destination= :city_destin, Postcode_destination= :postcode_destin, Number_rider= :number_rider,
+			Date= :dateOftrip, detail= :detail WHERE ID= :id");
+	}
+	elseif($_POST['type']=='Reguler')
+	{
+		$prep = $pdo -> prepare("UPDATE trip SET type= :type, City_departure= :city_depart, Postcode_departure= :postcode_depart, 
+			City_destination= :city_destin, Postcode_destination= :postcode_destin, Number_rider= :number_rider,
+			Day = :dateOftrip, detail= :detail WHERE ID= :id");
+	}
+	$prep -> bindParam(':type', $_POST['type'], PDO::PARAM_STR);
+	$prep -> bindParam(':city_depart', $_POST['city_depart'], PDO::PARAM_STR);
+	$prep -> bindParam(':postcode_depart', $_POST['postcode_depart'], PDO::PARAM_STR);
+	$prep -> bindParam(':city_destin', $_POST['city_destin'], PDO::PARAM_STR);
+	$prep -> bindParam(':postcode_destin', $_POST['postcode_destin'], PDO::PARAM_STR);
+	$prep -> bindParam(':number_rider', $_POST['number_rider'], PDO::PARAM_STR);
+	$prep -> bindParam(':dateOftrip', $_POST['dateOftrip'], PDO::PARAM_STR);
+	$prep -> bindParam(':detail', $_POST['detail'], PDO::PARAM_STR);
+	$prep -> bindParam(':id', $_GET['id'], PDO::PARAM_STR);
+	$rs = $prep -> execute();
+	if($rs){
+	
+		echo "<script type='text/javascript'>alert('Modify successfully');location.replace('home.php')</script>";
+		exit;
+	}
+}
+?>
+<!DOCTYPE HTML>
+<html>
+
+<head>
+<script src="js/jquery-3.1.1.min.js"></script>
+<script src="js/jquery-3.1.1.js"></script>
+<title>Post new Trip</title>
+<script>
+$(document).ready(function()  
+{
+	$("#type").change(function ()  
+	{
+		if($("#type").val()=='oneTime')
+		{
+			$("#dateOrdays").empty();
+			$("#dateOrdays").append('<br><label for="dateOftrip" >date:</label><input type="date" name="dateOftrip" min="<?=date("Y-m-d")?>" max="2020-12-31" value="<?=date("Y-m-d")?>">');
+		}
+		else if($("#type").val()=='Reguler')
+		{
+			$("#dateOrdays").empty();
+			$("#dateOrdays").append('<br><label for="dateOftrip" >date: regular on every </label><select type="date" name="dateOftrip" >'+
+			'<option value="Monday" selected>Monday</option>'+
+			'<option value="Tuesday">Tuesday</option>'+
+			'<option value="Wednesday" >Wednesday</option>'+
+			'<option value="Thursday">Thursday</option>'+
+			'<option value="Firday" >Firday</option>'+
+			'<option value="Saturday">Saturday</option>'+
+			'<option value="Sunday">Sunday</option>'+
+			'</select>');
+		}
+	});
+	
+	$("form :input, textarea").change(function ()  
+	{
+		$('form').data('changed',true);
+	});
+	  
+	$("form").submit(function (){
+		if(!$('form').data('changed'))  
+		{  
+			alert('please change one detail at least.!!!');  
+			return false;  
+		}
+	});
+});
+</script>
+</head>
+	
+<body>
+<a href="index.php">MainPage</a>&nbsp;<a href="profile.php">profile</a>&nbsp;<a href="home.php">Home</a> &nbsp; <a href="logout.php">Logout</a><br/>
+	<div>
+	
+		<h1>Modify the Trip</h1>
+	
+		<form method="POST">
+			<div>
+				select your trip type:
+				<select name="type" id="type" >
+					<option value="oneTime" selected="<?php if( $content['type'] == 'oneTime'){echo 'selected';}?>" >OneTime</option>
+					<option value="Reguler" selected="<?php if( $content['type'] == 'Reguler'){echo 'selected';}?>" >Reguler</option>
+				</select>
+			</div>
+			<div>
+				<label>Departure:</label><br/>
+				<input type="text" name="city_depart" id="city_depart" placeholder="City of departure" value="<?= $content['City_departure'] ?>" required/>
+				<input type="text" name="postcode_depart" id="postcode_depart" placeholder="postal code" value="<?= $content['Postcode_departure'] ?>" required/>
+			</div>
+			<div>
+				<br><label>Destination:</label><br/>
+				<input type="text" name="city_destin" id="city_destin" placeholder="City of destination" value="<?= $content['City_destination'] ?>" required/>
+				<input type="text" name="postcode_destin" id="postcode_destin" placeholder="postalcode" value="<?= $content['Postcode_destination'] ?>" required/>
+			</div>
+			
+			<div>
+				<br><label for="number_rider" >Number of Riders:</label>
+				<input type="number" name="number_rider" value="<?= $content['Number_rider'] ?>" required />
+			</div>
+			
+			<div id="dateOrdays" >
+			<?php if( empty($content['Day'])): ?>
+				<br><label for="dateOftrip" >date: </label>
+				<input type="date" name="dateOftrip" min="<?=date("Y-m-d")?>" max="2020-12-31" value="<?=$content['Date'] ?>" required />
+			<?php elseif(!empty($content['Day'])): ?>
+				<br><label for="dateOftrip" >date: regular on every </label>
+				<select type="date" name="dateOftrip" value="<?= $content['Day'] ?>" >
+					<option value="Monday" selected>Monday</option>
+					<option value="Tuesday">Tuesday</option>
+					<option value="Wednesday" >Wednesday</option>
+					<option value="Thursday">Thursday</option>
+					<option value="Firday" >Firday</option>
+					<option value="Saturday">Saturday</option>
+					<option value="Sunday">Sunday</option>
+				</select>
+			<?php endif; ?>
+			</div>
+			<div>
+				<label for="detail">more detail:</label><br/>
+				<textarea name="detail" cols="50" rows="10" required><?= $content['detail'] ?></textarea>
+			</div>
+			<div>
+				<input type="submit" value="modify" />
+				<input type="button" value="cancel" onclick="location.href='home.php'" />
+			</div>
+		</form>
+		
+	</div>
+</body>
+</html>
+
+
+detailTrip.php
+
+
+if(isset($_POST['id'])&&isset($_POST['type']))
+{
+	$pdo = new PDO("mysql:host=".$dbhost.";dbname=".$dbname,$dbuser,$dbpassword); 
+	$pdo->exec("SET NAMES 'utf8';");
+	$rs_check = $pdo -> query("SELECT * FROM book 
+			WHERE username='".$_SESSION['user']['username']."' AND tid='".$_POST['id']."' AND type='".$_POST['type']."'");
+	if($rs_check->rowCount() == 0)
+	{
+		$prep = $pdo -> prepare("INSERT INTO book(username,tid,type) VALUE( :username, :tid, :type)");
+		$prep -> bindParam(':username', $_SESSION['user']['username'] , PDO::PARAM_STR);
+		$prep -> bindParam(':tid', $_POST['id'] , PDO::PARAM_STR);
+		$prep -> bindParam(':type', $_POST['type'] , PDO::PARAM_STR);
+		$rs = $prep -> execute();
+		if($rs)
+		{
+			echo "Book successfully";
+			exit;
+		}
+	}
+	else{
+		echo "You already Book this trip, pleas check in My Book opinion!!";
+		exit;
+	}
+}
+
+<div id="button">
+<?php if($_SESSION['user']['username'] == $content['driver']): ?>
+	<button onclick="location.replace('modifyTrip.php?id=<?=$_GET['id']?>')">modify</button>
+	<button onclick="location.replace('detailTrip.php?delete=<?=$_GET['id']?>')">delete</button>
+<?php else: ?>
+	<button onclick='$( "#confirm" ).dialog({
+					resizable: false,
+					height: 300,
+					width: 400,
+					modal: true,
+					buttons: {
+					"Confirm": function() {
+						$.post("detailTrip.php",
+							{id:<?=$_GET['id']?>, type:"trip" },
+							function(result){
+								alert(result);
+								location.replace("home.php");
+							});
+							$( this ).dialog( "close" );
+					},
+					Cancel: function() {
+						$( this ).dialog( "close" );
+					}
+					}});'>Book
+	</button>
+<?php endif;?>
+</div>
+
+<div id="confirm" style='display:none'>
+	<b>Date: <?= $content['Date'].$content['Day']?></b><br>
+	<p>From: <?= $content['City_departure']." ".$content['Postcode_departure']?><br>
+	TO: <?= $content['City_departure']." ".$content['Postcode_departure']?><br>
+	Total Distance: <span id="distance"></span></p>
+	Pay: <b id="price" style="font-size:20px;"></b> c$ (1.5 c$/Km)
+</div>
+
+
+--------------------------------------------2016/12/3------------------------------------------------------
+
+<?php
+session_start();
+date_default_timezone_set('Etc/GMT+5');
+require_once("parameter.php");
+$info="";
+$pdo = new PDO("mysql:host=".$dbhost.";dbname=".$dbname,$dbuser,$dbpassword); 
+$pdo->exec("SET NAMES 'utf8';");
+if(!isset($_SESSION['user']) && empty($_SESSION['user'])) header("location:login.php");
+if(isset($_POST['type'])&&isset($_POST['city_depart'])&&isset($_POST['postcode_depart'])
+	&&isset($_POST['city_destin'])&&isset($_POST['postcode_destin'])&&isset($_POST['dateOftrip'])
+	&&isset($_POST['detail'])&&isset($_POST['time']))
+{
+	$prep = "INSERT INTO trip( type,City_departure,Postcode_departure,City_destination,Postcode_destination,Number_rider,Date,depart_time,detail,driver) 
+	VALUES('".$_POST['type']."','".$_POST['city_depart']."','".$_POST['postcode_depart']."','".$_POST['city_destin']."','".
+	$_POST['postcode_destin']."','1','".$_POST['dateOftrip']."','".$_POST['time'].":00',
+	'".$_POST['detail']."','".$_SESSION['user']['username']."')";
+	$rs = $pdo -> exec($prep);
+	if($rs==0)
+	{
+		echo "Error updating record:";
+	}else {
+		echo "<script type='text/javascript'>alert('post successfully');location.replace('home.php')</script>";
+	}
+}
+// if(isset($_POST['title']) && isset($_POST['body'])) {
+	// $postManager = new PdoPostManager(); //SimplePostManager;;
+	// $postManager->addPost($_POST['title'], $_POST['body'], $_SESSION['user']);
+	// header('Location: index.php');
+// }
+
+?>
+
+<!DOCTYPE HTML>
+<html>
+
+<head>
+<script src="js/jquery-3.1.1.min.js"></script>
+<script src="js/jquery-3.1.1.js"></script>
+<title>Post new Trip</title>
+
+</head>
+	
+<body>
+<?php require_once("header.php");  ?>
+	<div>
+	
+		<h1>New Special Offer</h1>
+	
+		<form method="POST">
+			<div>
+				select your Special offer type:
+				<input type="radio" name="type" id="status" value="pickup"> Pick Up
+				<input type="radio" name="type" id="status" value="delivery"> Delivery
+			</div>
+			<div>
+				<br><label>Departure:</label><br/>
+				<input type="text" name="city_depart" id="city_depart" placeholder="City of departure" required/>
+				<input type="text" name="postcode_depart" id="postcode_depart" placeholder="postal code" required/>
+			</div>
+			<div>
+				<br><label>Destination:</label><br/>
+				<input type="text" name="city_destin" id="city_destin" placeholder="City of destination" required/>
+				<input type="text" name="postcode_destin" id="postcode_destin" placeholder="postalcode" required/>
+			</div>
+			
+			<div id="dateOrdays" >
+				<br><label for="dateOftrip" >date: </label>
+				<input type="date" name="dateOftrip" min="<?=date("Y-m-d")?>" max="2017-12-31" value="<?=date("Y-m-d")?>" required>
+			</div>
+			
+			<div>
+				<br><label for="time" >time: </label>
+				<input type="time" id="time" name="time" value="00:00" required>
+			</div>
+			
+			<div>
+				<br><label for="detail">more detail:</label><br/>
+				<textarea name="detail" cols="50" rows="10" required></textarea>
+			</div>
+			<div>
+				<input type="submit" value="Submit" />
+			</div>
+		</form>
+		
+	</div>
+</body>
+	
+</html>
+
+home.php
+
+
+<td> <?php echo $trip['depart_time']?></td>
+
+postTrip.php
+if(!isset($_SESSION['user']) && empty($_SESSION['user'])) header("location:login.php");
+if(isset($_POST['type'])&&isset($_POST['city_depart'])&&isset($_POST['postcode_depart'])
+	&&isset($_POST['city_destin'])&&isset($_POST['postcode_destin'])&&isset($_POST['number_rider'])
+	&&isset($_POST['dateOftrip'])&&isset($_POST['detail']))
+{
+	if($_POST['type']=='oneTime')
+	{
+		$prep = "INSERT INTO trip( type,City_departure,Postcode_departure,City_destination,Postcode_destination,Number_rider,Date,depart_time,detail,driver) 
+		VALUES('".$_POST['type']."','".$_POST['city_depart']."','".$_POST['postcode_depart']."','".$_POST['city_destin']."','".
+		$_POST['postcode_destin']."','".$_POST['number_rider']."','".$_POST['dateOftrip']."',
+		'".$_POST['time']."','".$_POST['detail']."','".$_SESSION['user']['username']."')";
+		$rs = $pdo -> exec($prep);
+		if($rs==0)
+		{
+			echo "Error updating record:";
+		}else {
+			echo "<script type='text/javascript'>alert('post successfully');location.replace('home.php')</script>";
+		}
+	}
+	elseif($_POST['type'] =='Reguler')
+	{
+		$prep = "INSERT INTO trip(type,City_departure,Postcode_departure,City_destination,Postcode_destination,Number_rider,Day,detail,driver) 
+		VALUES('".$_POST['type']."','".$_POST['city_depart']."','".$_POST['postcode_depart']."','".$_POST['city_destin']."','".
+		$_POST['postcode_destin']."','".$_POST['number_rider']."','".$_POST['dateOftrip']."'
+		,'".$_POST['detail']."','".$_SESSION['user']['username']."')";
+		$rs = $pdo -> exec($prep);
+		if($rs==0)
+		{
+			echo "Error updating record:";
+		}else {
+			echo "<script type='text/javascript'>alert('post successfully');location.replace('home.php')</script>";
+		}
+	}
+}
+
+
+
+--------------------------------------------2016/12/4------------------------------------------------------
+modifyTrip.php
+
+if('<?= $content['type'] ?>' == 'oneTime')
+{
+	$("#oneTime").prop('selected', 'selected');
+}
+else if('<?= $content['type'] ?>' == 'Reguler')
+{
+	$("#Reguler").prop('selected', 'selected');
+}
+
+
+
+listSpOffer.php
+
+
+
+<?php
+$info = "";
+session_start();
+require_once("parameter.php");
+if(!isset($_SESSION['user'])&&$_SESSION['user']['status']=='inactive')
+{
+	header('location:login.php');
+	exit;
+}
+else
+{
+	$pdo = new PDO("mysql:host=".$dbhost.";dbname=".$dbname,$dbuser,$dbpassword); 
+	$pdo->exec("SET NAMES 'utf8';");
+	$rs = $pdo -> query("SELECT * FROM specialoffer ORDER BY Date,depart_time desc");
+	$content = $rs->fetchAll();
+}
+?>
+<html>
+<head>
+<title>My Special Offers</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="js/jquery-3.1.1.min.js"></script>
+<script src="js/jquery-3.1.1.js"></script>
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<style>
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1; /* Sit on top */
+    padding-top: 100px; /* Location of the box */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgb(0,0,0); /* Fallback color */
+    background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+/* Modal Content */
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 40%;
+}
+
+/* The Close Button */
+.close {
+    color: #aaaaaa;
+    float: right;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+</style>
+</head>
+<script>
+$(document).ready(function()
+    {  
+		$("#SpOffer a").click(function() {
+			var nameinfo = $(this).text()
+			$("#username_Info").empty();
+			$("#username_Info").append(nameinfo);
+			$.post("findUserInfo.php",
+				{driver: $(this).text()},
+				function(data){
+					if( data =='[]')
+					{
+						$("#userinfo").empty();
+						$("#userinfo").append("<p style='color:red'>no personal information!!</p><br>");
+						return;
+					}
+					var jsonarr = jQuery.parseJSON(data);
+					$("#userinfo").empty();
+					$("#userinfo").append("<p>");
+					$.each(jsonarr,function(i,item){
+						$("#userinfo").append( i +": "+ item+"<br>");
+					});
+					$("#userinfo").append("</p><br>");
+					
+					//$("#userinfo").append(data);
+				});
+			$("#myModal").show();
+		});
+		$("#close").click(function() {
+			$("#myModal").hide();
+		});
+		$("#sendMs").click(function(){
+			var m_to = $("#username_Info").text();
+			/*$("#email").dialog({
+				width: 600,
+                height: 500,
+			});
+			$("#email").tabs();*/
+			window.open("newmessage.php?m_to="+ m_to, "", "status=no,location=0,menubar=no,toolbar=no,height=450,width=600,top=100,left=380");
+		});
+    }
+);
+window.onclick = function(event) {
+    if (event.target == document.getElementById("myModal")) {
+        $("#myModal").hide();
+    }
+}
+
+</script>
+<body>
+
+<?php require_once("header.php"); ?> 
+<h1>My Special Offers</h1>
+<?php if($_SESSION['user']['status']!='inactive'): ?>
+	<div id="SpOffer">
+		<table style="width:60%">
+			<tr><th>date</th><th>depart time</th><th>driver</th> <th>Departure</th> <th>Destination</th> <th>GoDetial</th></tr>
+			<?php foreach($content as $offer) { ?>
+				<tr align="center">
+					<?php if(!empty($offer['Date'])): ?>
+						<td><?php echo $offer['Date']?></td>
+					<?php else: ?>
+						<td> <?php echo $offer['Day']?></td>
+					<?php endif; ?>
+					
+					<td> <?php echo $offer['depart_time']?></td>
+					
+					<?php if($offer['driver']==$_SESSION['user']['username']): ?>
+						<td><?php echo $offer['driver'];?></td>
+					<?php else :?>
+						<td><a href="javascript:;" value="<?php echo $offer['driver'];?>" ><?php echo $offer['driver'];?></a></td>
+					<?php endif; ?>
+					<td><?php echo $offer['City_departure']." ".$offer['Postcode_departure']?></td>
+					<td><?php echo $offer['City_destination']." ".$offer['Postcode_destination']?></td>
+					<td><button type="button" onclick="location.replace('detailOffer.php?id=<?php echo $offer['ID'] ?>');">detail</button></td>
+				<tr>
+			<?php } ?>
+		</table>		
+	</div>
+<?php endif; ?>
+
+<div id="myModal" class="modal">
+  <div class="modal-content">
+	
+    <span class="close" id='close'>close</span>
+	<h2 id='username_Info'></h2>
+	<p><a id="sendMs" href="javascript:;" title="Email">send massage to him/she</a></p>
+    <div id="userinfo">
+		
+	</div>
+ </div>
+</div>
+
+</body>
+</html>
+
+
+detailOffer.php
+
+<?php 
+
+session_start();
+require_once("parameter.php");
+
+
+if(!isset($_SESSION['user']))
+{
+	header('location:index.php');
+	exit;
+}
+if(isset($_POST['id']))
+{
+	$pdo = new PDO("mysql:host=".$dbhost.";dbname=".$dbname,$dbuser,$dbpassword); 
+	$pdo->exec("SET NAMES 'utf8';");
+
+	$prep = $pdo -> prepare("UPDATE specialoffer set customer= :customer WHERE ID=:id");
+	$prep -> bindParam(':customer', $_SESSION['user']['username'] , PDO::PARAM_STR);
+	$prep -> bindParam(':id', $_POST['id'] , PDO::PARAM_STR);
+	$rs = $prep -> execute();
+	if($rs)
+	{
+		echo "Book successfully";
+		exit;
+	}
+}
+if(isset($_GET['delete']))
+{
+	$pdo = new PDO("mysql:host=".$dbhost.";dbname=".$dbname,$dbuser,$dbpassword); 
+	$pdo->exec("SET NAMES 'utf8';");
+	$prep = $pdo -> prepare("DELETE FROM specialoffer WHERE ID = :id");
+	$prep -> bindParam(':id', $_GET['delete'] , PDO::PARAM_STR);
+	$rs = $prep -> execute();
+	if($rs)
+	{
+		echo "<script type='text/javascript'>alert('Deleted successfully'); location.replace('home.php')</script>";
+		exit;
+	}
+}
+elseif(isset($_GET['id']))
+{
+	$pdo = new PDO("mysql:host=".$dbhost.";dbname=".$dbname,$dbuser,$dbpassword); 
+	$pdo->exec("SET NAMES 'utf8';");
+	$rs = $pdo -> query("SELECT * FROM specialoffer WHERE id='".$_GET['id']."'");
+	if($rs->rowCount() == 0)
+	{
+		echo "<script type='text/javascript'>alert('Sent Message successfully');</script>";
+		header('location:home.php');
+	}
+	else
+	{
+		$content = $rs->fetch();
+	}
+}
+?>
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+	<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <title>Draggable directions</title>
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+		left: 10px;
+		top: 20px;
+        height: 80%;
+        float: left;
+        width: 40%;
+      }
+      #right-panel {
+        float: right;
+        width: 50%;
+        height: 100%;
+      }
+#right-panel {
+  font-family: 'Roboto','sans-serif';
+  line-height: 30px;
+  padding-left: 10px;
+}
+
+#right-panel select, #right-panel input {
+  font-size: 15px;
+}
+
+#right-panel select {
+  width: 100%;
+}
+
+#right-panel i {
+  font-size: 12px;
+}
+
+.panel {
+	height: 100%;
+	overflow: auto;
+}
+</style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="right-panel">
+		<br><a href="home.php">Cancle</a><br>
+		
+		
+		<b>Date: <?= $content['Date']?>
+			---<font style="color:red;">Depart time: <?= $content['depart_time'] ?> </font>
+		</b><br>
+		type: <?= $content['type'] ?>
+		<p>From: <?= $content['City_departure']." ".$content['Postcode_departure']?><br>
+		TO: <?= $content['City_departure']." ".$content['Postcode_departure']?><br>
+		Total Distance: <span id="total"></span></p>
+		<p><?= $content['detail']?></p><br><br>
+		<div id="button">
+		<?php if($_SESSION['user']['username'] == $content['driver']): ?>
+			<button onclick="location.replace('modifyOffer.php?id=<?=$_GET['id']?>')">modify</button>
+			<button onclick="location.replace('detailOffer.php?delete=<?=$_GET['id']?>')">delete</button>
+		<?php elseif(!empty($content['customer'])): ?>
+			<button disabled >booked</button>
+			
+		<?php else:?>
+			<button onclick='$( "#confirm" ).dialog({
+									resizable: false,
+									height: 300,
+									width: 400,
+									modal: true,
+									buttons: {
+										"Confirm": function() {
+											$.post("detailOffer.php",{id:<?=$_GET['id']?> },
+											function(result){
+												alert(result);
+												location.replace("home.php");
+											});
+											$( this ).dialog( "close" );
+										},
+										Cancel: function() {
+											$( this ).dialog( "close" );
+										}
+									}});'>Book
+			</button>
+		<?php endif;?>
+		</div>
+    </div>
+
+	<div id="confirm" style='display:none'>
+		<b>Date: <?= $content['Date'] ?></b><br>
+		<p>From: <?= $content['City_departure']." ".$content['Postcode_departure']?><br>
+		TO: <?= $content['City_departure']." ".$content['Postcode_departure']?><br>
+		Total Distance: <span id="distance"></span></p>
+		Pay: <b id="price" style="font-size:20px;"></b> c$ (1 c$/Km)
+	</div>
+    <script>
+function initMap() {
+  var map = new google.maps.Map(document.getElementById('map'), {
+    zoom: 4,
+    center: {lat: 62.227, lng: 105.380}
+  });
+
+  var directionsService = new google.maps.DirectionsService;
+  var directionsDisplay = new google.maps.DirectionsRenderer({
+    draggable: true,
+    map: map,
+  });
+
+  directionsDisplay.addListener('directions_changed', function() {
+    computeTotalDistance(directionsDisplay.getDirections());
+  });
+
+  displayRoute('<?= $content['City_departure']." ".$content['Postcode_departure']?>, CA', '<?= $content['City_destination']." ".$content['Postcode_destination']?>, CA', directionsService,
+      directionsDisplay);
+}
+
+function displayRoute(origin, destination, service, display) {
+  service.route({
+    origin: origin,
+    destination: destination,
+    travelMode: google.maps.TravelMode.DRIVING,
+    avoidTolls: false
+  }, function(response, status) {
+    if (status === google.maps.DirectionsStatus.OK) {
+      display.setDirections(response);
+    } else {
+      alert('Could not display directions due to: ' + status);
+    }
+  });
+}
+
+function computeTotalDistance(result) {
+  var total = 0;
+  var myroute = result.routes[0];
+  for (var i = 0; i < myroute.legs.length; i++) {
+    total += myroute.legs[i].distance.value;
+  }
+  total = total / 1000;
+  document.getElementById('total').innerHTML = total + ' km';
+  document.getElementById('distance').innerHTML = total + ' km';
+  document.getElementById('price').innerHTML = (total * 1).toFixed(2);
+}
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBlGLkm55s_8dY9-AHMffqrqewylwlFPBU&callback=initMap"
+        async defer></script>
+  </body>
+</html>
